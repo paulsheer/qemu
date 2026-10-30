@@ -1,6 +1,6 @@
 # QEMU — Solaris 10 sun4u device-emulation fixes
 
-This fork adds device-emulation fixes needed for Solaris 10 (SPARC,
+This fork adds device-emulation fixes needed for REAL FULL Sun Microsystems Solaris 10 (SPARC,
 `sun4u`) to boot and for its IDE and SCSI drivers to bind.
 
 ## What changed
