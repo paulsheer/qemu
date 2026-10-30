@@ -373,7 +373,9 @@ static void lsi_soft_reset(LSIState *s)
     s->mbox1 = 0;
     s->dfifo = 0;
     s->ctest2 = LSI_CTEST2_DACK;
-    s->ctest3 = 0;
+    /* CTEST3 bits [7:4] are the chip revision ID (read-only); Solaris 10's
+       glm driver reads this and rejects a 53c895 with revision < 2. */
+    s->ctest3 = 0x20;
     s->ctest4 = 0;
     s->ctest5 = 0;
     s->ccntl0 = 0;
@@ -1693,7 +1695,7 @@ static uint8_t lsi_reg_readb(LSIState *s, int offset)
     case 0x07: /* GPREG0 */
         ret = 0x7f;
         break;
-    case 0x08: /* Revision ID */
+    case 0x08: /* SFBR */
         ret = 0x00;
         break;
     case 0x09: /* SOCL */
@@ -1998,7 +2000,8 @@ static void lsi_reg_writeb(LSIState *s, int offset, uint8_t val)
         s->ctest2 = val & LSI_CTEST2_PCICIE;
         break;
     case 0x1b: /* CTEST3 */
-        s->ctest3 = val & 0x0f;
+        /* Preserve the read-only revision ID in bits [7:4]. */
+        s->ctest3 = (s->ctest3 & 0xf0) | (val & 0x0f);
         break;
     CASE_SET_REG32(temp, 0x1c)
     case 0x21: /* CTEST4 */
@@ -2406,7 +2409,11 @@ static void lsi_class_init(ObjectClass *klass, const void *data)
     k->realize = lsi_scsi_realize;
     k->exit = lsi_scsi_exit;
     k->vendor_id = PCI_VENDOR_ID_LSI_LOGIC;
-    k->device_id = PCI_DEVICE_ID_LSI_53C895A;
+    /* Report the 53C895 (not the 895A): Solaris 10's glm driver binds to and
+       supports the 895 but has no entry for the 895A (0x0012).  Revision 0x02
+       is within the range glm accepts for the 895 (1..3). */
+    k->device_id = PCI_DEVICE_ID_LSI_53C895;
+    k->revision = 0x02;
     k->class_id = PCI_CLASS_STORAGE_SCSI;
     k->subsystem_id = 0x1000;
     device_class_set_legacy_reset(dc, lsi_scsi_reset);

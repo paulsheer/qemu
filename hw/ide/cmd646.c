@@ -200,12 +200,14 @@ static void cmd646_set_irq(void *opaque, int channel, int level)
 
     irq_mask = MRDMODE_INTR_CH0 << channel;
     if (level) {
+        /* Latch the interrupt status: real CMD646 sets CFR/ARTTIM23 and holds
+         * it until the guest writes-1-to-clear. It must not be cleared by the
+         * INTRQ line dropping (e.g. status-register read), otherwise Solaris's
+         * uata driver polls an already-cleared bit after set_features. */
         pd->config[MRDMODE] |= irq_mask;
-    } else {
-        pd->config[MRDMODE] &= ~irq_mask;
+        cmd646_update_dma_interrupts(pd);
+        cmd646_update_irq(pd);
     }
-    cmd646_update_dma_interrupts(pd);
-    cmd646_update_irq(pd);
 }
 
 static void cmd646_reset(DeviceState *dev)
